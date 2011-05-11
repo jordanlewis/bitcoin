@@ -3,6 +3,11 @@
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
 #include "headers.h"
+
+#include "xpm/addressbook16.xpm"
+#include "xpm/bitcoin80.xpm"
+#include "xpm/send16noshadow.xpm"
+
 #ifdef _MSC_VER
 #include <crtdbg.h>
 #endif
