@@ -34,12 +34,6 @@
 #include <wx/clipbrd.h>
 #include <wx/taskbar.h>
 #endif
-#include <openssl/buffer.h>
-#include <openssl/ecdsa.h>
-#include <openssl/evp.h>
-#include <openssl/rand.h>
-#include <openssl/sha.h>
-#include <openssl/ripemd.h>
 #include <db_cxx.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,8 +53,8 @@
 #include <set>
 #include <algorithm>
 #include <numeric>
+
 #include <boost/foreach.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 #include <boost/tuple/tuple_io.hpp>

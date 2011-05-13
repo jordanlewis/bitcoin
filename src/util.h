@@ -2,6 +2,12 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
+#include <openssl/buffer.h>
+#include <openssl/ecdsa.h>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <openssl/sha.h>
+#include <openssl/ripemd.h>
 
 #if defined(_MSC_VER) || defined(__BORLANDC__)
 typedef __int64  int64;
