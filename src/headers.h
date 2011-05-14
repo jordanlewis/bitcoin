@@ -42,7 +42,6 @@
 #include <limits.h>
 #include <float.h>
 #include <assert.h>
-#include <memory>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -50,9 +49,6 @@
 #include <list>
 #include <deque>
 #include <map>
-#include <set>
-#include <algorithm>
-#include <numeric>
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
@@ -70,7 +66,6 @@
 #include <boost/interprocess/sync/interprocess_recursive_mutex.hpp>
 #include <boost/date_time/gregorian/gregorian_types.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
-#include <boost/config.hpp>
 #include <boost/program_options/detail/config_file.hpp>
 #include <boost/program_options/parsers.hpp>
 
