@@ -4,6 +4,7 @@
 
 #include "headers.h"
 #include "irc.h"
+#include "net.h"
 
 int nGotIRCAddresses = 0;
 bool fGotExternalIP = false;

@@ -4,6 +4,7 @@
 
 #include "headers.h"
 #include "db.h"
+#include "net.h"
 
 void ThreadFlushWalletDB(void* parg);
 
