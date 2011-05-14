@@ -99,7 +99,6 @@ using namespace boost;
 #include "bignum.h"
 #include "base58.h"
 #include "script.h"
-#include "db.h"
 #include "net.h"
 #include "main.h"
 #include "rpc.h"

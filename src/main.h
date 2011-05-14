@@ -66,6 +66,9 @@ extern int fUseUPnP;
 
 
 
+class CReserveKey;
+class CTxDB;
+class CTxIndex;
 
 
 bool CheckDiskSpace(uint64 nAdditionalBytes=0);
