@@ -8,6 +8,7 @@
 #include <boost/asio.hpp>
 #include <boost/iostreams/concepts.hpp>
 #include <boost/iostreams/stream.hpp>
+#include <boost/algorithm/string.hpp>
 #ifdef USE_SSL
 #include <boost/asio/ssl.hpp> 
 typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket> SSLStream;

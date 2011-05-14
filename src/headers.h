@@ -47,27 +47,17 @@
 #include <string>
 #include <vector>
 #include <list>
-#include <deque>
 #include <map>
 
-#include <boost/foreach.hpp>
-#include <boost/tuple/tuple.hpp>
-#include <boost/tuple/tuple_comparison.hpp>
-#include <boost/tuple/tuple_io.hpp>
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <boost/algorithm/string.hpp>
 #include <boost/thread.hpp>
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/sync/interprocess_recursive_mutex.hpp>
-#include <boost/date_time/gregorian/gregorian_types.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
-#include <boost/program_options/detail/config_file.hpp>
-#include <boost/program_options/parsers.hpp>
 
 #ifdef __WXMSW__
 #include <windows.h>

@@ -8,6 +8,7 @@
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <openssl/ripemd.h>
+#include <boost/foreach.hpp>
 
 #if defined(_MSC_VER) || defined(__BORLANDC__)
 typedef __int64  int64;
