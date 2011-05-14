@@ -3,6 +3,7 @@
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
 #include "headers.h"
+#include "irc.h"
 
 int nGotIRCAddresses = 0;
 bool fGotExternalIP = false;
