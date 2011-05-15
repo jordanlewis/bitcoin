@@ -91,7 +91,6 @@
 using namespace std;
 using namespace boost;
 
-#include "strlcpy.h"
 #include "serialize.h"
 #include "uint256.h"
 #include "util.h"

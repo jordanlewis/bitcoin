@@ -3,6 +3,7 @@
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
 #include "headers.h"
+#include "strlcpy.h"
 #include <boost/program_options/detail/config_file.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <deque>

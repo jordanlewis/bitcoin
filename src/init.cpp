@@ -7,6 +7,7 @@
 #include "rpc.h"
 #include "net.h"
 #include "init.h"
+#include "strlcpy.h"
 
 
 
