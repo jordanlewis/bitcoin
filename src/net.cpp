@@ -1600,3 +1600,513 @@ public:
     }
 }
 instance_of_cnetcleanup;
+
+
+
+CMessageHeader::CMessageHeader()
+{
+    memcpy(pchMessageStart, ::pchMessageStart, sizeof(pchMessageStart));
+    memset(pchCommand, 0, sizeof(pchCommand));
+    pchCommand[1] = 1;
+    nMessageSize = -1;
+    nChecksum = 0;
+}
+
+CMessageHeader::CMessageHeader(const char* pszCommand, unsigned int nMessageSizeIn)
+{
+    memcpy(pchMessageStart, ::pchMessageStart, sizeof(pchMessageStart));
+    strncpy(pchCommand, pszCommand, COMMAND_SIZE);
+    nMessageSize = nMessageSizeIn;
+    nChecksum = 0;
+}
+
+string CMessageHeader::GetCommand()
+{
+    if (pchCommand[COMMAND_SIZE-1] == 0)
+        return string(pchCommand, pchCommand + strlen(pchCommand));
+    else
+        return string(pchCommand, pchCommand + COMMAND_SIZE);
+}
+
+bool CMessageHeader::IsValid()
+{
+    // Check start string
+    if (memcmp(pchMessageStart, ::pchMessageStart, sizeof(pchMessageStart)) != 0)
+        return false;
+
+    // Check the command string for errors
+    for (char* p1 = pchCommand; p1 < pchCommand + COMMAND_SIZE; p1++)
+    {
+        if (*p1 == 0)
+        {
+            // Must be all zeros after the first zero
+            for (; p1 < pchCommand + COMMAND_SIZE; p1++)
+                if (*p1 != 0)
+                    return false;
+        }
+        else if (*p1 < ' ' || *p1 > 0x7E)
+            return false;
+    }
+
+    // Message size
+    if (nMessageSize > MAX_SIZE)
+    {
+        printf("CMessageHeader::IsValid() : (%s, %u bytes) nMessageSize > MAX_SIZE\n", GetCommand().c_str(), nMessageSize);
+        return false;
+    }
+
+    return true;
+}
+
+CAddress::CAddress()
+{
+    Init();
+}
+
+CAddress::CAddress(unsigned int ipIn, unsigned short portIn, uint64 nServicesIn)
+{
+    Init();
+    ip = ipIn;
+    port = (portIn == 0 ? GetDefaultPort() : portIn);
+    nServices = nServicesIn;
+}
+
+CAddress::CAddress(const struct sockaddr_in& sockaddr, uint64 nServicesIn)
+{
+    Init();
+    ip = sockaddr.sin_addr.s_addr;
+    port = sockaddr.sin_port;
+    nServices = nServicesIn;
+}
+
+CAddress::CAddress(const char* pszIn, uint64 nServicesIn)
+{
+    Init();
+    SetAddress(pszIn);
+    nServices = nServicesIn;
+}
+
+CAddress::CAddress(string strIn, uint64 nServicesIn)
+{
+    Init();
+    SetAddress(strIn.c_str());
+    nServices = nServicesIn;
+}
+
+void CAddress::Init()
+{
+    nServices = NODE_NETWORK;
+    memcpy(pchReserved, pchIPv4, sizeof(pchReserved));
+    ip = INADDR_NONE;
+    port = GetDefaultPort();
+    nTime = 100000000;
+    nLastTry = 0;
+}
+
+bool CAddress::SetAddress(const char* pszIn)
+{
+    ip = INADDR_NONE;
+    port = GetDefaultPort();
+    char psz[100];
+    strlcpy(psz, pszIn, sizeof(psz));
+    unsigned int a=0, b=0, c=0, d=0, e=0;
+    if (sscanf(psz, "%u.%u.%u.%u:%u", &a, &b, &c, &d, &e) < 4)
+        return false;
+    char* pszPort = strchr(psz, ':');
+    if (pszPort)
+    {
+        *pszPort++ = '\0';
+        port = htons(atoi(pszPort));
+        if (atoi(pszPort) < 0 || atoi(pszPort) > USHRT_MAX)
+            port = htons(USHRT_MAX);
+    }
+    ip = inet_addr(psz);
+    return IsValid();
+}
+
+bool CAddress::SetAddress(string strIn)
+{
+    return SetAddress(strIn.c_str());
+}
+
+vector<unsigned char> CAddress::GetKey() const
+{
+    CDataStream ss;
+    ss.reserve(18);
+    ss << FLATDATA(pchReserved) << ip << port;
+
+    #if defined(_MSC_VER) && _MSC_VER < 1300
+    return vector<unsigned char>((unsigned char*)&ss.begin()[0], (unsigned char*)&ss.end()[0]);
+    #else
+    return vector<unsigned char>(ss.begin(), ss.end());
+    #endif
+}
+
+struct sockaddr_in CAddress::GetSockAddr() const
+{
+    struct sockaddr_in sockaddr;
+    memset(&sockaddr, 0, sizeof(sockaddr));
+    sockaddr.sin_family = AF_INET;
+    sockaddr.sin_addr.s_addr = ip;
+    sockaddr.sin_port = port;
+    return sockaddr;
+}
+
+bool CAddress::IsIPv4() const
+{
+    return (memcmp(pchReserved, pchIPv4, sizeof(pchIPv4)) == 0);
+}
+
+bool CAddress::IsRoutable() const
+{
+    return IsValid() &&
+        !(GetByte(3) == 10 ||
+            (GetByte(3) == 192 && GetByte(2) == 168) ||
+            GetByte(3) == 127 ||
+            GetByte(3) == 0);
+}
+
+bool CAddress::IsValid() const
+{
+    // Clean up 3-byte shifted addresses caused by garbage in size field
+    // of addr messages from versions before 0.2.9 checksum.
+    // Two consecutive addr messages look like this:
+    // header20 vectorlen3 addr26 addr26 addr26 header20 vectorlen3 addr26 addr26 addr26...
+    // so if the first length field is garbled, it reads the second batch
+    // of addr misaligned by 3 bytes.
+    if (memcmp(pchReserved, pchIPv4+3, sizeof(pchIPv4)-3) == 0)
+        return false;
+
+    return (ip != 0 && ip != INADDR_NONE && port != htons(USHRT_MAX));
+}
+
+unsigned char CAddress::GetByte(int n) const
+{
+    return ((unsigned char*)&ip)[3-n];
+}
+
+string CAddress::ToStringIPPort() const
+{
+    return strprintf("%u.%u.%u.%u:%u", GetByte(3), GetByte(2), GetByte(1), GetByte(0), ntohs(port));
+}
+
+string CAddress::ToStringIP() const
+{
+    return strprintf("%u.%u.%u.%u", GetByte(3), GetByte(2), GetByte(1), GetByte(0));
+}
+
+string CAddress::ToStringPort() const
+{
+    return strprintf("%u", ntohs(port));
+}
+
+string CAddress::ToStringLog() const
+{
+    return "";
+}
+
+string CAddress::ToString() const
+{
+    return strprintf("%u.%u.%u.%u:%u", GetByte(3), GetByte(2), GetByte(1), GetByte(0), ntohs(port));
+}
+
+void CAddress::print() const
+{
+    printf("CAddress(%s)\n", ToString().c_str());
+}
+
+CInv::CInv()
+{
+    type = 0;
+    hash = 0;
+}
+
+CInv::CInv(int typeIn, const uint256& hashIn)
+{
+    type = typeIn;
+    hash = hashIn;
+}
+
+CInv::CInv(const string& strType, const uint256& hashIn)
+{
+    int i;
+    for (i = 1; i < ARRAYLEN(ppszTypeName); i++)
+    {
+        if (strType == ppszTypeName[i])
+        {
+            type = i;
+            break;
+        }
+    }
+    if (i == ARRAYLEN(ppszTypeName))
+        throw std::out_of_range(strprintf("CInv::CInv(string, uint256) : unknown type '%s'", strType.c_str()));
+    hash = hashIn;
+}
+
+bool CInv::IsKnownType() const
+{
+    return (type >= 1 && type < ARRAYLEN(ppszTypeName));
+}
+
+const char* CInv::GetCommand() const
+{
+    if (!IsKnownType())
+        throw std::out_of_range(strprintf("CInv::GetCommand() : type=%d unknown type", type));
+    return ppszTypeName[type];
+}
+
+string CInv::ToString() const
+{
+    return strprintf("%s %s", GetCommand(), hash.ToString().substr(0,20).c_str());
+}
+
+void CInv::print() const
+{
+    printf("CInv(%s)\n", ToString().c_str());
+}
+
+
+CRequestTracker::CRequestTracker(void (*fnIn)(void*, CDataStream&), void* param1In)
+{
+    fn = fnIn;
+    param1 = param1In;
+}
+
+bool CRequestTracker::IsNull()
+{
+    return fn == NULL;
+}
+
+
+
+
+CNode::CNode(SOCKET hSocketIn, CAddress addrIn, bool fInboundIn)
+{
+    nServices = 0;
+    hSocket = hSocketIn;
+    vSend.SetType(SER_NETWORK);
+    vSend.SetVersion(0);
+    vRecv.SetType(SER_NETWORK);
+    vRecv.SetVersion(0);
+    // Version 0.2 obsoletes 20 Feb 2012
+    if (GetTime() > 1329696000)
+    {
+        vSend.SetVersion(209);
+        vRecv.SetVersion(209);
+    }
+    nLastSend = 0;
+    nLastRecv = 0;
+    nLastSendEmpty = GetTime();
+    nTimeConnected = GetTime();
+    nHeaderStart = -1;
+    nMessageStart = -1;
+    addr = addrIn;
+    nVersion = 0;
+    strSubVer = "";
+    fClient = false; // set by version message
+    fInbound = fInboundIn;
+    fNetworkNode = false;
+    fSuccessfullyConnected = false;
+    fDisconnect = false;
+    nRefCount = 0;
+    nReleaseTime = 0;
+    hashContinue = 0;
+    pindexLastGetBlocksBegin = 0;
+    hashLastGetBlocksEnd = 0;
+    nStartingHeight = -1;
+    fGetAddr = false;
+    vfSubscribe.assign(256, false);
+
+    // Be shy and don't send version until we hear
+    if (!fInbound)
+        PushVersion();
+}
+
+CNode::~CNode()
+{
+    if (hSocket != INVALID_SOCKET)
+    {
+        closesocket(hSocket);
+        hSocket = INVALID_SOCKET;
+    }
+}
+
+
+int CNode::GetRefCount()
+{
+    return max(nRefCount, 0) + (GetTime() < nReleaseTime ? 1 : 0);
+}
+
+CNode* CNode::AddRef(int64 nTimeout)
+{
+    if (nTimeout != 0)
+        nReleaseTime = max(nReleaseTime, GetTime() + nTimeout);
+    else
+        nRefCount++;
+    return this;
+}
+
+void CNode::Release()
+{
+    nRefCount--;
+}
+
+
+
+void CNode::AddAddressKnown(const CAddress& addr)
+{
+    setAddrKnown.insert(addr);
+}
+
+void CNode::PushAddress(const CAddress& addr)
+{
+    // Known checking here is only to save space from duplicates.
+    // SendMessages will filter it again for knowns that were added
+    // after addresses were pushed.
+    if (addr.IsValid() && !setAddrKnown.count(addr))
+        vAddrToSend.push_back(addr);
+}
+
+
+void CNode::AddInventoryKnown(const CInv& inv)
+{
+    CRITICAL_BLOCK(cs_inventory)
+        setInventoryKnown.insert(inv);
+}
+
+void CNode::PushInventory(const CInv& inv)
+{
+    CRITICAL_BLOCK(cs_inventory)
+        if (!setInventoryKnown.count(inv))
+            vInventoryToSend.push_back(inv);
+}
+
+void CNode::AskFor(const CInv& inv)
+{
+    // We're using mapAskFor as a priority queue,
+    // the key is the earliest time the request can be sent
+    int64& nRequestTime = mapAlreadyAskedFor[inv];
+    printf("askfor %s   %"PRI64d"\n", inv.ToString().c_str(), nRequestTime);
+
+    // Make sure not to reuse time indexes to keep things in the same order
+    int64 nNow = (GetTime() - 1) * 1000000;
+    static int64 nLastTime;
+    nLastTime = nNow = max(nNow, ++nLastTime);
+
+    // Each retry is 2 minutes after the last
+    nRequestTime = max(nRequestTime + 2 * 60 * 1000000, nNow);
+    mapAskFor.insert(make_pair(nRequestTime, inv));
+}
+
+
+
+void CNode::BeginMessage(const char* pszCommand)
+{
+    cs_vSend.Enter();
+    if (nHeaderStart != -1)
+        AbortMessage();
+    nHeaderStart = vSend.size();
+    vSend << CMessageHeader(pszCommand, 0);
+    nMessageStart = vSend.size();
+    if (fDebug)
+        printf("%s ", DateTimeStrFormat("%x %H:%M:%S", GetTime()).c_str());
+    printf("sending: %s ", pszCommand);
+}
+
+void CNode::AbortMessage()
+{
+    if (nHeaderStart == -1)
+        return;
+    vSend.resize(nHeaderStart);
+    nHeaderStart = -1;
+    nMessageStart = -1;
+    cs_vSend.Leave();
+    printf("(aborted)\n");
+}
+
+void CNode::EndMessage()
+{
+    if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
+    {
+        printf("dropmessages DROPPING SEND MESSAGE\n");
+        AbortMessage();
+        return;
+    }
+
+    if (nHeaderStart == -1)
+        return;
+
+    // Set the size
+    unsigned int nSize = vSend.size() - nMessageStart;
+    memcpy((char*)&vSend[nHeaderStart] + offsetof(CMessageHeader, nMessageSize), &nSize, sizeof(nSize));
+
+    // Set the checksum
+    if (vSend.GetVersion() >= 209)
+    {
+        uint256 hash = Hash(vSend.begin() + nMessageStart, vSend.end());
+        unsigned int nChecksum = 0;
+        memcpy(&nChecksum, &hash, sizeof(nChecksum));
+        assert(nMessageStart - nHeaderStart >= offsetof(CMessageHeader, nChecksum) + sizeof(nChecksum));
+        memcpy((char*)&vSend[nHeaderStart] + offsetof(CMessageHeader, nChecksum), &nChecksum, sizeof(nChecksum));
+    }
+
+    printf("(%d bytes) ", nSize);
+    printf("\n");
+
+    nHeaderStart = -1;
+    nMessageStart = -1;
+    cs_vSend.Leave();
+}
+
+void CNode::EndMessageAbortIfEmpty()
+{
+    if (nHeaderStart == -1)
+        return;
+    int nSize = vSend.size() - nMessageStart;
+    if (nSize > 0)
+        EndMessage();
+    else
+        AbortMessage();
+}
+
+
+
+void CNode::PushVersion()
+{
+    /// when NTP implemented, change to just nTime = GetAdjustedTime()
+    int64 nTime = (fInbound ? GetAdjustedTime() : GetTime());
+    CAddress addrYou = (fUseProxy ? CAddress("0.0.0.0") : addr);
+    CAddress addrMe = (fUseProxy ? CAddress("0.0.0.0") : addrLocalHost);
+    RAND_bytes((unsigned char*)&nLocalHostNonce, sizeof(nLocalHostNonce));
+    PushMessage("version", VERSION, nLocalServices, nTime, addrYou, addrMe,
+            nLocalHostNonce, string(pszSubVer), nBestHeight);
+}
+
+
+
+
+void CNode::PushMessage(const char* pszCommand)
+{
+    try
+    {
+        BeginMessage(pszCommand);
+        EndMessage();
+    }
+    catch (...)
+    {
+        AbortMessage();
+        throw;
+    }
+}
+
+void CNode::PushRequest(const char* pszCommand,
+                    void (*fn)(void*, CDataStream&), void* param1)
+{
+    uint256 hashReply;
+    RAND_bytes((unsigned char*)&hashReply, sizeof(hashReply));
+
+    CRITICAL_BLOCK(cs_mapRequests)
+        mapRequests[hashReply] = CRequestTracker(fn, param1);
+
+    PushMessage(pszCommand, hashReply);
+}
