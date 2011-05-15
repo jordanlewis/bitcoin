@@ -5,6 +5,7 @@
 #include "headers.h"
 #include "db.h"
 #include "net.h"
+#include "init.h"
 #include "cryptopp/sha.h"
 
 

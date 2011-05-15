@@ -6,6 +6,7 @@
 #include "db.h"
 #include "rpc.h"
 #include "net.h"
+#include "init.h"
 
 
 

@@ -106,4 +106,3 @@ using namespace boost;
 #else
 #include "noui.h"
 #endif
-#include "init.h"
