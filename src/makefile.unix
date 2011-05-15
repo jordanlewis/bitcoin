@@ -53,31 +53,34 @@ OBJS= \
     cryptopp/obj/sha.o \
     cryptopp/obj/cpu.o
 
+OBJSNOGUI=$(OBJS:obj/%=obj/nogui/%)
 
 all: bitcoin
 
+-include $(OBJS:.o=.d)
+-include $(OBJSNOGUI:.o=.d)
 
-obj/%.o: %.cpp $(HEADERS)
-	$(CXX) -c $(CXXFLAGS) $(WXINCLUDEPATHS) -DGUI -o $@ $<
+obj/%.o: %.cpp
+	$(CXX) -MMD -c $(CXXFLAGS) $(WXINCLUDEPATHS) -DGUI -o $@ $<
 
 cryptopp/obj/%.o: cryptopp/%.cpp
-	$(CXX) -c $(CXXFLAGS) -O3 -o $@ $<
+	$(CXX) -MMD -c $(CXXFLAGS) -O3 -o $@ $<
 
 bitcoin: $(OBJS) obj/ui.o obj/uibase.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(WXLIBS) $(LIBS)
 
 
-obj/nogui/%.o: %.cpp $(HEADERS)
-	$(CXX) -c $(CXXFLAGS) -o $@ $<
+obj/nogui/%.o: %.cpp
+	$(CXX) -MMD -c $(CXXFLAGS) -o $@ $<
 
 bitcoind: $(OBJS:obj/%=obj/nogui/%)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 
 clean:
-	-rm -f obj/*.o
-	-rm -f obj/nogui/*.o
-	-rm -f cryptopp/obj/*.o
+	-rm -f obj/*.[od]
+	-rm -f obj/nogui/*.[od]
+	-rm -f cryptopp/obj/*.[od]
 	-rm -f headers.h.gch
 	-rm -f bitcoin
 	-rm -f bitcoind

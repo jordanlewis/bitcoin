@@ -47,6 +47,8 @@ OBJS= \
     cryptopp/obj/sha.o \
     cryptopp/obj/cpu.o
 
+OBJSNOGUI=$(OBJS:obj/%=obj/nogui/%)
+
 ifdef USE_UPNP
 	LIBS += $(DEPSDIR)/lib/libminiupnpc.a
 	DEFS += -DUSE_UPNP=$(USE_UPNP)
@@ -55,19 +57,21 @@ endif
 
 all: bitcoin
 
+-include $(OBJS:.o=.d)
+-include $(OBJSNOGUI:.o=.d)
 
-obj/%.o: %.cpp $(HEADERS)
-	$(CXX) -c $(CFLAGS) -DGUI -o $@ $<
+obj/%.o: %.cpp
+	$(CXX) -MMD -c $(CFLAGS) -DGUI -o $@ $<
 
 cryptopp/obj/%.o: cryptopp/%.cpp
-	$(CXX) -c $(CFLAGS) -O3 -DCRYPTOPP_DISABLE_ASM -o $@ $<
+	$(CXX) -MMD -c $(CFLAGS) -O3 -DCRYPTOPP_DISABLE_ASM -o $@ $<
 
 bitcoin: $(OBJS) obj/ui.o obj/uibase.o
 	$(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(WXLIBS) $(LIBS)
 
 
-obj/nogui/%.o: %.cpp $(HEADERS)
-	$(CXX) -c $(CFLAGS) -o $@ $<
+obj/nogui/%.o: %.cpp
+	$(CXX) -MMD -c $(CFLAGS) -o $@ $<
 
 bitcoind: $(OBJS:obj/%=obj/nogui/%)
 	$(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
@@ -75,6 +79,6 @@ bitcoind: $(OBJS:obj/%=obj/nogui/%)
 
 clean:
 	-rm -f bitcoin bitcoind
-	-rm -f obj/*.o
-	-rm -f obj/nogui/*.o
-	-rm -f cryptopp/obj/*.o
+	-rm -f obj/*.[od]
+	-rm -f obj/nogui/*.[od]
+	-rm -f cryptopp/obj/*.[od]

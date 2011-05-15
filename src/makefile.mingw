@@ -55,15 +55,19 @@ OBJS= \
     cryptopp/obj/sha.o \
     cryptopp/obj/cpu.o
 
+OBJSNOGUI=$(OBJS:obj/%=obj/nogui/%)
+
 
 all: bitcoin.exe
 
+-include $(OBJS:.o=.d)
+-include $(OBJSNOGUI:.o=.d)
 
-obj/%.o: %.cpp $(HEADERS)
-	g++ -c $(CFLAGS) -DGUI -o $@ $<
+obj/%.o: %.cpp
+	g++ -MMD -c $(CFLAGS) -DGUI -o $@ $<
 
 cryptopp/obj/%.o: cryptopp/%.cpp
-	g++ -c $(CFLAGS) -O3 -DCRYPTOPP_X86_ASM_AVAILABLE -o $@ $<
+	g++ -MMD -c $(CFLAGS) -O3 -DCRYPTOPP_X86_ASM_AVAILABLE -o $@ $<
 
 obj/ui_res.o: ui.rc  rc/bitcoin.ico rc/check.ico rc/send16.bmp rc/send16mask.bmp rc/send16masknoshadow.bmp rc/send20.bmp rc/send20mask.bmp rc/addressbook16.bmp rc/addressbook16mask.bmp rc/addressbook20.bmp rc/addressbook20mask.bmp
 	windres $(DEFS) $(INCLUDEPATHS) -o $@ -i $<
@@ -72,8 +76,8 @@ bitcoin.exe: $(OBJS) obj/ui.o obj/uibase.o obj/ui_res.o
 	g++ $(CFLAGS) -mwindows -Wl,--subsystem,windows -o $@ $(LIBPATHS) $^ $(WXLIBS) $(LIBS)
 
 
-obj/nogui/%.o: %.cpp $(HEADERS)
-	g++ -c $(CFLAGS) -o $@ $<
+obj/nogui/%.o: %.cpp
+	g++ -MMD -c $(CFLAGS) -o $@ $<
 
 bitcoind.exe: $(OBJS:obj/%=obj/nogui/%) obj/ui_res.o
 	g++ $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
